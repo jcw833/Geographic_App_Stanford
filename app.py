@@ -1,4 +1,4 @@
- # My Python App
+# My Python App
 
 ## Setup
 
@@ -27,15 +27,38 @@ df2 = pd.read_csv(
     'appdata2.csv')
 
 
-# print(type(df2['USA GDP 2019']))
+# Initialize app
+
+app = dash.Dash(
+    __name__,
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
+    ],
+)
+server = app.server
 
 
-# Initialize the app
+DEFAULT_COLORSCALE = [
+    "#f2fffb",
+    "#bbffeb",
+    "#98ffe0",
+    "#79ffd6",
+    "#6df0c8",
+    "#69e7c0",
+    "#59dab2",
+    "#45d0a5",
+    "#31c194",
+    "#2bb489",
+    "#25a27b",
+    "#1e906d",
+    "#188463",
+    "#157658",
+    "#11684d",
+    "#10523e",
+]
 
-app = dash.Dash(__name__)
-app.config.suppress_callback_exceptions = True
-
-app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
+mapbox_access_token = "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
+mapbox_style = "mapbox://styles/plotlymapbox/cjvprkf3t1kns1cqjxuxmwixz"
 
 # Creates a list of dictionaries
 map_vals = ['2015 GDP per capita','2016 GDP per capita','2017 GDP per capita','2018 GDP per capita','2019 GDP per capita', '2020 Population', '2018 Population', 'Log 2020 Population', 'Log 2018 Population', 'Number of Universites Per State', 'Number of Universites Per State (No CA)']
@@ -60,125 +83,279 @@ def get_yax_options(y_axis):
     return y_axis_options
 
 
-app.layout = html.Div(children=[
-             html.Div(className='row',  # Define the row element
-                      children=[
-                      html.Div(className='four columns div-user-controls',
-                                    children=[
-                                       html.H1('3D Printing Community Python App'),
-                                       html.P('''Use dropdown menu to plot values'''),
-                                       html.H2('United States Geographic Map:'),
-                                       html.Div(className='div-for-dropdown',
-                                            children=[
-                                                dcc.Dropdown(id='Map Selection',
-                                                   options=get_map_options(map_vals),
-                                                   multi=False,
-                                                   value=[map_vals[0]],
-                                                   style={'backgroundColor': '#1E1E1E'},
-                                                   className='MapSelector')
-                                                  ],
-                                                    style={'color': '#1E1E1E'}),
+YEARS = [2015, 2016, 2017, 2018]
 
-                                       html.H2('ScatterPlot:'),
-                                       html.H2('X-Axis for Scatterplot'),
-                                       html.Div(className='X-Axis',
-                                             children=[
-                                                 dcc.Dropdown(id='X-Axis Select',
-                                                    options=get_xax_options(x_axis),
-                                                    multi=False,
-                                                    value=[x_axis[0]],
-                                                    style={'backgroundColor': '#1E1E1E'},
-                                                    className='ScatterSelector')
-                                                   ],
-                                                     style={'color': '#1E1E1E'}),
-
-                                       html.H2('Y-Axis for Scatterplot'),
-                                       html.Div(className='Y-Axis',
-                                             children=[
-                                                 dcc.Dropdown(id='Y-Axis Select',
-                                                    options=get_yax_options(y_axis),
-                                                    multi=False,
-                                                    value=[y_axis[0]],
-                                                    style={'backgroundColor': '#1E1E1E'},
-                                                    className='ScatterSelector')
-                                                   ],
-                                                     style={'color': '#1E1E1E'})]
-
-                                                     ),
+#######################################################################################
 
 
-                    html.Div(className='eight columns div-for-charts bg-grey',
-                                    children=[
-                                    dcc.Graph(id = "Map"),
-                                    dcc.Graph(id='Scatterplot',config={'displayModeBar': False},animate=False)] ,
-                                    style={"border":"6px black solid"})
-                                         ])
-                                     ])
+# App layout
+
+app.layout = html.Div(
+    id="root",
+    children=[
+        html.Div(
+            id="header",
+            children=[
+                html.H4(children="USA Geographic Analysis Application"),
+                html.P(
+                    id="description",
+                    children="† Graph Geographic Data Below:.",
+                ),
+            ],
+        ),
+        html.Div(
+            id="app-container",
+            children=[
+                html.Div(
+                    id="left-column",
+                    children=[
+                        html.Div(
+                            id="slider-container",
+                            children=[
+                                html.P(
+                                    id="slider-text",
+                                    children="Drag the slider to change the year:",
+                                ),
+                                dcc.Slider(
+                                    id="years-slider",
+                                    min=min(YEARS),
+                                    max=max(YEARS),
+                                    value=min(YEARS),
+                                    marks={
+                                        str(year): {
+                                            "label": str(year),
+                                            "style": {"color": "#7fafdf"},
+                                        }
+                                        for year in YEARS
+                                    },
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            id="heatmap-container",
+                            children=[
+                                html.P(
+                                    "Heatmap of age adjusted mortality rates \
+                            from poisonings in year {0}".format(
+                                        min(YEARS)
+                                    ),
+                                    id="heatmap-title",
+                                ),
+                                dcc.Graph(
+                                    id="county-choropleth",
+                                    figure=dict(
+                                        layout=dict(
+                                            mapbox=dict(
+                                                layers=[],
+                                                accesstoken=mapbox_access_token,
+                                                style=mapbox_style,
+                                                center=dict(
+                                                    lat=38.72490, lon=-95.61446
+                                                ),
+                                                pitch=0,
+                                                zoom=3.5,
+                                            ),
+                                            autosize=True,
+                                        ),
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                html.Div(
+                    id="graph-container",
+                    children=[
+                        html.P(id="chart-selector", children="Select Plot:"),
+                        html.H2('Y-Axis for Scatterplot'),
+                        dcc.Dropdown(id='X-Axis Select',
+                                    options=get_xax_options(x_axis),
+                                    multi=False,
+                                    value=[x_axis[0]],
+                                    style={'backgroundColor': '#1E1E1E'},
+                                    className='ScatterSelector'),
+
+                        html.H2('Y-Axis for Scatterplot'),
+                        dcc.Dropdown(id='Y-Axis Select',
+                                    options=get_yax_options(y_axis),
+                                    multi=False,
+                                    value=[y_axis[0]],
+                                    style={'backgroundColor': '#1E1E1E'},
+                                    className='ScatterSelector'),
+
+                        dcc.Graph(
+                            id="Scatterplot",
+                            figure=dict(
+                                data=[dict(x=0, y=0)],
+                                layout=dict(
+                                    paper_bgcolor="#F4F4F8",
+                                    plot_bgcolor="#F4F4F8",
+                                    autofill=True,
+                                    margin=dict(t=75, r=50, b=100, l=50),
+                                ),
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        ])
+
+# app.layout = html.Div(children=[
+#                         html.Div(
+#                             id="root",
+#                             children=[
+#                                 html.Div(
+#                                     id="header",
+#                                     children=[
+#                                         html.H1(children="3D Printing Community Python App"),
+#                                         html.P(
+#                                             id="description",
+#                                             children="Interactive app for data visualization",
+#                                                 ),
+#                                     ], style={"border":"3px black solid"})
+#                                     ]),
+#
+#
+#              html.Div(className='row',  # Define the row element
+#                       children=[
+#                       html.Div(className='three columns div-user-controls',
+#                                     children=[
+#                                        html.H2('United States Geographic Map:'),
+#                                        html.Div(className='div-for-dropdown',
+#                                             children=[
+#                                                 dcc.Dropdown(id='Map Selection',
+#                                                    options=get_map_options(map_vals),
+#                                                    multi=False,
+#                                                    value=[map_vals[0]],
+#                                                    style={'backgroundColor': '#1E1E1E'},
+#                                                    className='MapSelector')
+#                                                   ],
+#                                                     style={'color': '#1E1E1E'}),
+#
+#                                        html.H2('ScatterPlot:'),
+#                                        html.H2('X-Axis for Scatterplot'),
+#                                        html.Div(className='X-Axis',
+#                                              children=[
+#                                                  dcc.Dropdown(id='X-Axis Select',
+#                                                     options=get_xax_options(x_axis),
+#                                                     multi=False,
+#                                                     value=[x_axis[0]],
+#                                                     style={'backgroundColor': '#1E1E1E'},
+#                                                     className='ScatterSelector')
+#                                                    ],
+#                                                      style={'color': '#1E1E1E'}),
+#
+#                                        html.H2('Y-Axis for Scatterplot'),
+#                                        html.Div(className='Y-Axis',
+#                                              children=[
+#                                                  dcc.Dropdown(id='Y-Axis Select',
+#                                                     options=get_yax_options(y_axis),
+#                                                     multi=False,
+#                                                     value=[y_axis[0]],
+#                                                     style={'backgroundColor': '#1E1E1E'},
+#                                                     className='ScatterSelector')
+#                                                    ],
+#                                                      style={'color': '#1E1E1E'})
+#                                                      ],
+#                                                      ),
+#
+#                         html.Div(id="app-container",
+#                                         children=[
+#                                             html.Div(className='five columns div-for-charts bg-grey',
+#                                                         children=[
+#                                                             html.Div(id="slider-container",
+#                                                                 children=[
+#                                                                     html.P(
+#                                                                         id="slider-text",
+#                                                                         children="Drag the slider to change the year:",
+#                                                                             ),
+#                                                                     dcc.Slider(
+#                                                                 id="years-slider",
+#                                                                 min=min(YEARS),
+#                                                                 max=max(YEARS),
+#                                                                 value=min(YEARS),
+#                                                                 marks={
+#                                                                     str(year): {
+#                                                                         "label": str(year),
+#                                                                         "style": {"color": "#7fafdf"},
+#                                                                     }
+#                                                                     for year in YEARS
+#                                                                 },
+#                                                             ),
+#                                                         ],
+#                                                     ),
+#                                                             dcc.Graph(id = "Map"),
+#                                                             dcc.Graph(id='Scatterplot',config={'displayModeBar': False},animate=False)] ,
+#                                                             style={"border":"3px black solid"}),
+#                                                     ])
+#                                                 ])
+#                                      ])
 
 ###################################
 
 # Callback for Map
-@app.callback(Output('Map', 'figure'),
-              [Input('Map Selection', 'value')])
-def update_map(selected_dropdown_value):
-
-        mapval = df['2019']
-
-        if selected_dropdown_value == '2015 GDP per capita':
-          mapval = df['2015']
-
-        elif selected_dropdown_value == '2016 GDP per capita':
-          mapval = df['2016']
-
-        elif selected_dropdown_value == '2017 GDP per capita':
-          mapval = df['2017']
-
-        elif selected_dropdown_value == '2018 GDP per capita':
-          mapval = df['2018']
-
-        elif selected_dropdown_value == '2019 GDP per capita':
-          mapval = df['2019']
-
-        elif selected_dropdown_value == '2020 Population':
-          mapval = df['Pop2020']
-
-        elif selected_dropdown_value == '2018 Population':
-          mapval = df['Pop2018']
-
-        elif selected_dropdown_value == 'Log 2020 Population':
-          mapval = df['Log Pop 2020']
-
-        elif selected_dropdown_value == 'Log 2018 Population':
-          mapval = df['Log Pop 2018']
-
-        elif selected_dropdown_value == 'Number of Universites Per State':
-            mapval = df['Number of Universites Per State']
-
-        elif selected_dropdown_value == 'Number of Universites Per State (No CA)':
-            mapval = df['Number of Universites Per State (No CA)']
-
-        figure = go.Figure(
-            data=go.Choropleth(
-            locations=df['GeoName'], # Spatial coordinates
-            z = mapval, # Data to be color-coded
-            locationmode = 'USA-states', # set of locations match entries in `locations`
-            colorscale = 'Reds',
-            colorbar_title = "Density"),
-            layout = go.Layout(geo=dict(bgcolor= 'rgba(0,0,0,0)', lakecolor='#1E1E1E',
-              landcolor='rgba(51,17,0,0.2)',
-              subunitcolor='black'),
-              title = 'Geographic Data: ' + str( selected_dropdown_value ),
-              font = {"size": 9, "color":"White"},
-              titlefont = {"size": 15, "color":"White"},
-              geo_scope='usa',
-              margin={"r":0,"t":40,"l":0,"b":0},
-              paper_bgcolor='#1E1E1E',
-              plot_bgcolor='#1E1E1E',
-              )
-              )
-        return figure
-
-
+# @app.callback(Output('Map', 'figure'),
+#               [Input('Map Selection', 'value')])
+# def update_map(selected_dropdown_value):
+#
+#         mapval = df['2019']
+#
+#         if selected_dropdown_value == '2015 GDP per capita':
+#           mapval = df['2015']
+#
+#         elif selected_dropdown_value == '2016 GDP per capita':
+#           mapval = df['2016']
+#
+#         elif selected_dropdown_value == '2017 GDP per capita':
+#           mapval = df['2017']
+#
+#         elif selected_dropdown_value == '2018 GDP per capita':
+#           mapval = df['2018']
+#
+#         elif selected_dropdown_value == '2019 GDP per capita':
+#           mapval = df['2019']
+#
+#         elif selected_dropdown_value == '2020 Population':
+#           mapval = df['Pop2020']
+#
+#         elif selected_dropdown_value == '2018 Population':
+#           mapval = df['Pop2018']
+#
+#         elif selected_dropdown_value == 'Log 2020 Population':
+#           mapval = df['Log Pop 2020']
+#
+#         elif selected_dropdown_value == 'Log 2018 Population':
+#           mapval = df['Log Pop 2018']
+#
+#         elif selected_dropdown_value == 'Number of Universites Per State':
+#             mapval = df['Number of Universites Per State']
+#
+#         elif selected_dropdown_value == 'Number of Universites Per State (No CA)':
+#             mapval = df['Number of Universites Per State (No CA)']
+#
+#         figure = go.Figure(
+#             data=go.Choropleth(
+#             locations=df['GeoName'], # Spatial coordinates
+#             z = mapval, # Data to be color-coded
+#             locationmode = 'USA-states', # set of locations match entries in `locations`
+#             colorscale = 'Reds',
+#             colorbar_title = "Density"),
+#             layout = go.Layout(geo=dict(bgcolor= 'rgba(0,0,0,0)', lakecolor='#1E1E1E',
+#               landcolor='rgba(51,17,0,0.2)',
+#               subunitcolor='black'),
+#               title = 'Geographic Data: ' + str( selected_dropdown_value ),
+#               font = {"size": 9, "color":"White"},
+#               titlefont = {"size": 15, "color":"White"},
+#               geo_scope='usa',
+#               margin={"r":0,"t":40,"l":0,"b":0},
+#               paper_bgcolor='#1E1E1E',
+#               plot_bgcolor='#1E1E1E',
+#               )
+#               )
+#         return figure
+#
+#
 # Callback for Map
 @app.callback(Output('Scatterplot', 'figure'),
               [Input('X-Axis Select', 'value'),
@@ -255,15 +432,12 @@ def update_scatter(x1,y1):
            trendline = 'ols'))
 
 
-    figure.layout.plot_bgcolor = '#1E1E1E'
-    figure.layout.paper_bgcolor = '#1E1E1E'
+    figure.layout.paper_bgcolor="#F4F4F8"
+    figure.layout.plot_bgcolor="#F4F4F8"
 
 
     return figure
 
-
-      # figure.plot(xval, b + m * xval, '-', label= 'y=' + str(m) + 'x' + '+' + str(b))
-      # figure.legend()
 
 if __name__ == "__main__":
     app.run_server(debug=True)
