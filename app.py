@@ -13,7 +13,11 @@ import dash_core_components as dcc
 import plotly.express as px
 import plotly.graph_objects as go
 from numpy.polynomial.polynomial import polyfit
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+
+import plotly.figure_factory as ff
+
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -25,6 +29,13 @@ df = df[0:50]
 
 df2 = pd.read_csv(
     'appdata2.csv')
+
+
+df_sample = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/laucnty16.csv')
+df_sample['State FIPS Code'] = df_sample['State FIPS Code'].apply(lambda x: str(x).zfill(2))
+df_sample['County FIPS Code'] = df_sample['County FIPS Code'].apply(lambda x: str(x).zfill(3))
+df_sample['FIPS'] = df_sample['State FIPS Code'] + df_sample['County FIPS Code']
+
 
 
 # Initialize app
@@ -99,7 +110,7 @@ app.layout = html.Div(
                 html.H4(children="USA Geographic Analysis Application"),
                 html.P(
                     id="description",
-                    children="† Graph Geographic Data Below:.",
+                    children="† Graph Geographic Data Below:",
                 ),
             ],
         ),
@@ -114,7 +125,7 @@ app.layout = html.Div(
                             children=[
                                 html.P(
                                     id="slider-text",
-                                    children="Drag the slider to change the year:",
+                                    children="Drag the slider to change the year to visualize:",
                                 ),
                                 dcc.Slider(
                                     id="years-slider",
@@ -131,12 +142,18 @@ app.layout = html.Div(
                                 ),
                             ],
                         ),
+                        dcc.Checklist(
+                            options=[
+                                {'label': 'GDP', 'value': 'GDP'},
+                                {'label': 'Population', 'value': 'POP'},
+                                {'label': 'Unemployment', 'value': 'Unemployment'},
+                            ],
+                            value=['GDP', 'POP', 'Unemployment']),
                         html.Div(
                             id="heatmap-container",
                             children=[
                                 html.P(
-                                    "Heatmap of age adjusted mortality rates \
-                            from poisonings in year {0}".format(
+                                    "County Data Visualization".format(
                                         min(YEARS)
                                     ),
                                     id="heatmap-title",
@@ -166,17 +183,20 @@ app.layout = html.Div(
                 html.Div(
                     id="graph-container",
                     children=[
-                        html.P(id="chart-selector", children="Select Plot:"),
-                        html.H2('Y-Axis for Scatterplot'),
-                        dcc.Dropdown(id='X-Axis Select',
-                                    options=get_xax_options(x_axis),
-                                    multi=False,
-                                    value=[x_axis[0]],
-                                    style={'backgroundColor': '#1E1E1E'},
-                                    className='ScatterSelector'),
-
-                        html.H2('Y-Axis for Scatterplot'),
-                        dcc.Dropdown(id='Y-Axis Select',
+                    html.P(id="chart-selector", children="Select Plot:"),
+                    html.P('X-Axis for Scatterplot'),
+                    html.Div(className='X-Axis',
+                         children=[
+                             dcc.Dropdown(id='X-Axis Select',
+                                options=get_xax_options(x_axis),
+                                multi=False,
+                                value=[x_axis[0]],
+                                style={'backgroundColor': '#1E1E1E'},
+                                className='ScatterSelector')
+                               ],
+                                 style={'color': '#1E1E1E'}),
+                    html.P('Y-Axis for Scatterplot'),
+                    dcc.Dropdown(id='Y-Axis Select',
                                     options=get_yax_options(y_axis),
                                     multi=False,
                                     value=[y_axis[0]],
@@ -188,8 +208,8 @@ app.layout = html.Div(
                             figure=dict(
                                 data=[dict(x=0, y=0)],
                                 layout=dict(
-                                    paper_bgcolor="#F4F4F8",
-                                    plot_bgcolor="#F4F4F8",
+                                    paper_bgcolor="#1E1E1E",
+                                    plot_bgcolor="#1E1E1E",
                                     autofill=True,
                                     margin=dict(t=75, r=50, b=100, l=50),
                                 ),
@@ -294,9 +314,57 @@ app.layout = html.Div(
 
 ###################################
 
-# Callback for Map
-# @app.callback(Output('Map', 'figure'),
-#               [Input('Map Selection', 'value')])
+
+@app.callback(
+    Output("county-choropleth", "figure"),
+    [Input("years-slider", "value")],
+    [State("county-choropleth", "figure")],
+)
+def display_map(year, figure):
+
+
+    colorscale = ["#f2fffb",
+    "#bbffeb",
+    "#98ffe0",
+    "#79ffd6",
+    "#6df0c8",
+    "#69e7c0",
+    "#59dab2",
+    "#45d0a5",
+    "#31c194",
+    "#2bb489",
+    "#25a27b",
+    "#1e906d",
+    "#188463",
+    "#157658",
+    "#11684d",
+    "#10523e",
+]
+
+    endpts = list(np.linspace(1, 12, len(colorscale) - 1))
+    fips = df_sample['FIPS'].tolist()
+    values = df_sample['Unemployment Rate (%)'].tolist()
+
+    fig = ff.create_choropleth(
+        fips=fips, values=values,
+        binning_endpoints=endpts,
+        colorscale=colorscale,
+        show_state_data=False,
+        show_hover=True, centroid_marker={'opacity': 0},
+        asp=2.9,
+        legend_title='% unemployed',
+        paper_bgcolor='#1f2630',
+        plot_bgcolor='#1f2630')
+
+
+
+    return fig
+
+
+
+# # Callback for Map
+# @app.callback(Output('county-choropleth', 'figure'),
+#               [Input('county-choropleth', 'value')])
 # def update_map(selected_dropdown_value):
 #
 #         mapval = df['2019']
@@ -334,28 +402,67 @@ app.layout = html.Div(
 #         elif selected_dropdown_value == 'Number of Universites Per State (No CA)':
 #             mapval = df['Number of Universites Per State (No CA)']
 #
-#         figure = go.Figure(
-#             data=go.Choropleth(
-#             locations=df['GeoName'], # Spatial coordinates
-#             z = mapval, # Data to be color-coded
-#             locationmode = 'USA-states', # set of locations match entries in `locations`
-#             colorscale = 'Reds',
-#             colorbar_title = "Density"),
-#             layout = go.Layout(geo=dict(bgcolor= 'rgba(0,0,0,0)', lakecolor='#1E1E1E',
-#               landcolor='rgba(51,17,0,0.2)',
-#               subunitcolor='black'),
-#               title = 'Geographic Data: ' + str( selected_dropdown_value ),
-#               font = {"size": 9, "color":"White"},
-#               titlefont = {"size": 15, "color":"White"},
-#               geo_scope='usa',
-#               margin={"r":0,"t":40,"l":0,"b":0},
-#               paper_bgcolor='#1E1E1E',
-#               plot_bgcolor='#1E1E1E',
-#               )
-#               )
+#         # figure = go.Figure(
+#         #     data=go.Choropleth(
+#         #     locations=df['GeoName'], # Spatial coordinates
+#         #     z = mapval, # Data to be color-coded
+#         #     locationmode = 'USA-states', # set of locations match entries in `locations`
+#         #     colorscale = 'Reds',
+#         #     colorbar_title = "Density"),
+#         #     layout = go.Layout(geo=dict(bgcolor= 'rgba(0,0,0,0)', lakecolor='#1E1E1E',
+#         #       landcolor='rgba(51,17,0,0.2)',
+#         #       subunitcolor='black'),
+#         #       title = 'Geographic Data: ' + str( selected_dropdown_value ),
+#         #       font = {"size": 9, "color":"White"},
+#         #       titlefont = {"size": 15, "color":"White"},
+#         #       geo_scope='usa',
+#         #       margin={"r":0,"t":40,"l":0,"b":0},
+#         #       paper_bgcolor='#1E1E1E',
+#         #       plot_bgcolor='#1E1E1E',
+#         #       )
+#         #       )
+#         # return figure
+#
+#         figure = dff.iplot(
+#                 kind="area",
+#                 x="Year",
+#                 y="Age Adjusted Rate",
+#                 text="County",
+#                 categories="County",
+#                 colors=[
+#                     "#1b9e77",
+#                     "#d95f02",
+#                     "#7570b3",
+#                     "#e7298a",
+#                     "#66a61e",
+#                     "#e6ab02",
+#                     "#a6761d",
+#                     "#666666",
+#                     "#1b9e77",
+#                 ],
+#                 vline=[year],
+#                 asFigure=True,
+#             )
+#
+#         fig_layout["yaxis"]["title"] = "Age-adjusted death rate per county per year"
+#         fig_layout["xaxis"]["title"] = ""
+#         fig_layout["yaxis"]["fixedrange"] = True
+#         fig_layout["xaxis"]["fixedrange"] = False
+#         fig_layout["hovermode"] = "closest"
+#         fig_layout["title"] = "<b>{0}</b> counties selected".format(len(fips))
+#         fig_layout["legend"] = dict(orientation="v")
+#         fig_layout["autosize"] = True
+#         fig_layout["paper_bgcolor"] = "#1f2630"
+#         fig_layout["plot_bgcolor"] = "#1f2630"
+#         fig_layout["font"]["color"] = "#2cfec1"
+#         fig_layout["xaxis"]["tickfont"]["color"] = "#2cfec1"
+#         fig_layout["yaxis"]["tickfont"]["color"] = "#2cfec1"
+#         fig_layout["xaxis"]["gridcolor"] = "#5b5b5b"
+#         fig_layout["yaxis"]["gridcolor"] = "#5b5b5b"
+#
 #         return figure
-#
-#
+
+
 # Callback for Map
 @app.callback(Output('Scatterplot', 'figure'),
               [Input('X-Axis Select', 'value'),
@@ -432,8 +539,8 @@ def update_scatter(x1,y1):
            trendline = 'ols'))
 
 
-    figure.layout.paper_bgcolor="#F4F4F8"
-    figure.layout.plot_bgcolor="#F4F4F8"
+    figure.layout.paper_bgcolor="#1f2630"
+    figure.layout.plot_bgcolor="#1f2630"
 
 
     return figure
