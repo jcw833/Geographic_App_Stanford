@@ -40,10 +40,10 @@ df2 = pd.read_csv(
 
 # Load data
 
-df_sample = pd.read_csv('Unemployment2016.csv')
-df_sample['State FIPS Code'] = df_sample['State FIPS Code'].apply(lambda x: str(x).zfill(2))
-df_sample['County FIPS Code'] = df_sample['County FIPS Code'].apply(lambda x: str(x).zfill(3))
-df_sample['FIPS'] = df_sample['State FIPS Code'] + df_sample['County FIPS Code']
+df_unemp = pd.read_csv('UnemploymentStats.csv')
+df_unemp['State FIPS Code'] = df_unemp['State FIPS Code'].apply(lambda x: str(x).zfill(2))
+df_unemp['County FIPS Code'] = df_unemp['County FIPS Code'].apply(lambda x: str(x).zfill(3))
+df_unemp['FIPS'] = df_unemp['State FIPS Code'] + df_unemp['County FIPS Code']
 
 
 
@@ -103,7 +103,7 @@ def get_yax_options(y_axis):
     return y_axis_options
 
 
-YEARS = [2015, 2016, 2017, 2018]
+YEARS = [2015, 2016, 2017, 2018, 2019]
 
 #######################################################################################
 
@@ -152,17 +152,19 @@ app.layout = html.Div(
                             ],
                         ),
                         dcc.Checklist(
+                            id="checkbox",
                             options=[
-                                {'label': 'GDP', 'value': 'GDP'},
-                                {'label': 'Population', 'value': 'POP'},
-                                {'label': 'Unemployment', 'value': 'Unemployment'},
+                                {'label': 'State GDP', 'value': 'GDP'},
+                                {'label': 'County Population', 'value': 'POP'},
+                                {'label': 'County Unemployment', 'value': 'Unemployment'},
                             ],
-                            value=['Null', 'Null', 'Unemployment']),
+                            value=['Unemployment']
+                            ),
                         html.Div(
                             id="heatmap-container",
                             children=[
                                 html.P(
-                                    "County Data Visualization".format(
+                                    "State/County Data Visualization".format(
                                         min(YEARS)
                                     ),
                                     id="heatmap-title",
@@ -237,29 +239,108 @@ app.layout = html.Div(
 @app.callback(
     Output("county-choropleth", "figure"),
     [Input("years-slider", "value")],
+    [Input("checkbox", "value")],
     [State("county-choropleth", "figure")],
 )
-def display_map(year, figure):
+def display_map(year, checkbox, figure):
 
-    endpts = list(np.linspace(1, 12, len(colorscale) - 1))
-    fips = df_sample['FIPS'].tolist()
-    values = df_sample['Unemployment Rate (%)'].tolist()
+    if checkbox == ['Unemployment']:
 
+        print(checkbox)
+        print(year)
 
-    fig = ff.create_choropleth(
-        fips=fips, values=values, scope=['usa'],
-        binning_endpoints=endpts, colorscale=colorscale,
-        show_state_data=False,
-        show_hover=True,
-        asp = 2.9,
-        legend_title = '% unemployed'
-    )
+        endpts = list(np.linspace(1, 12, len(colorscale) - 1))
+        fips = df_unemp['FIPS'].tolist()
+        values = df_unemp['Unemployment Rate '+str(year)+' (%)'].tolist()
 
 
-    fig.layout.paper_bgcolor="#252b33"
-    fig.layout.plot_bgcolor="#252b33"
+        fig = ff.create_choropleth(
+            fips=fips, values=values, scope=['usa'],
+            binning_endpoints=endpts, colorscale=colorscale,
+            show_state_data=False,
+            show_hover=True,
+            asp = 2.9,
+            legend_title = '% unemployed '+str(year)
+        )
 
-    return fig
+
+        fig.layout.paper_bgcolor="#252b33"
+        fig.layout.plot_bgcolor="#252b33"
+
+        return fig
+
+    elif checkbox == ['POP']:
+
+        print(checkbox)
+        print(year)
+
+        endpts = list(np.linspace(10000, 1000000, len(colorscale) - 1))
+        fips = df_unemp['FIPS'].tolist()
+        values = df_unemp['Pop '+str(year)].tolist()
+
+
+        fig = ff.create_choropleth(
+            fips=fips, values=values, scope=['usa'],
+            binning_endpoints=endpts, colorscale=colorscale,
+            show_state_data=False,
+            show_hover=True,
+            asp = 2.9,
+            legend_title = 'County Population '+str(year)
+        )
+
+
+        fig.layout.paper_bgcolor="#252b33"
+        fig.layout.plot_bgcolor="#252b33"
+
+        return fig
+
+    elif checkbox == ['GDP']:
+
+            print(checkbox)
+            print(year)
+
+            endpts = list(np.linspace(40000, 100000, len(colorscale) - 1))
+            fips = df_unemp['FIPS'].tolist()
+            values = df_unemp['GDP '+str(year)].tolist()
+
+
+            fig = ff.create_choropleth(
+                fips=fips, values=values, scope=['usa'],
+                binning_endpoints=endpts, colorscale=colorscale,
+                show_hover=True,
+                asp = 2.9,
+                legend_title = 'GDP '+str(year)
+            )
+
+
+            fig.layout.paper_bgcolor="#252b33"
+            fig.layout.plot_bgcolor="#252b33"
+
+            return fig
+
+
+
+    else:
+
+        endpts = list(np.linspace(1, 12, len(colorscale) - 1))
+        fips = df_unemp['FIPS'].tolist()
+        values = df_unemp['Unemployment Rate '+str(year)+' (%)'].tolist()
+
+
+        fig = ff.create_choropleth(
+            fips=fips, values=values, scope=['usa'],
+            binning_endpoints=endpts, colorscale=colorscale,
+            show_state_data=False,
+            show_hover=True,
+            asp = 2.9,
+            legend_title = '% unemployed '+str(year)
+        )
+
+
+        fig.layout.paper_bgcolor="#252b33"
+        fig.layout.plot_bgcolor="#252b33"
+
+        return fig
 
 
 
