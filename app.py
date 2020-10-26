@@ -49,16 +49,16 @@ df_unemp['FIPS'] = df_unemp['State FIPS Code'] + df_unemp['County FIPS Code']
 
 # Initialize app
 
-# app = dash.Dash(
-#     __name__,
-#     meta_tags=[
-#         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
-#     ],
-# )
-# server = app.server
+app = dash.Dash(
+    __name__,
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
+    ],
+)
+server = app.server
 
-server = flask.Flask(__name__)
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], server=server)
+# server = flask.Flask(__name__)
+# app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], server=server)
 
 colorscale = [
     "#f2fffb",
