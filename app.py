@@ -29,8 +29,8 @@ df = pd.read_csv(
     'appData.csv')
 df = df[0:50]
 
-df2 = pd.read_csv(
-    'appdata2.csv')
+# df2 = pd.read_csv(
+#     'appdata2.csv')
 
 
 # Load data
@@ -83,21 +83,23 @@ mapbox_access_token = "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG
 mapbox_style = "mapbox://styles/plotlymapbox/cjvprkf3t1kns1cqjxuxmwixz"
 
 # Creates a list of dictionaries
-map_vals = ['2015 GDP per capita','2016 GDP per capita','2017 GDP per capita','2018 GDP per capita','2019 GDP per capita', '2020 Population', '2018 Population', 'Log 2020 Population', 'Log 2018 Population', 'Number of Universites Per State', 'Number of Universites Per State (No CA)']
-def get_map_options(map_vals):
-    map_options = []
-    for i in map_vals:
-        map_options.append({'label': i, 'value': i})
-    return map_options
+# map_vals = ['2015 GDP per capita','2016 GDP per capita','2017 GDP per capita','2018 GDP per capita','2019 GDP per capita', '2020 Population', '2018 Population', 'Log 2020 Population', 'Log 2018 Population', 'Number of Universites Per State', 'Number of Universites Per State (No CA)']
+# def get_map_options(map_vals):
+#     map_options = []
+#     for i in map_vals:
+#         map_options.append({'label': i, 'value': i})
+#     return map_options
 
-x_axis = ['2019 Project Count', '2018 Project Count', '2017 Project Count', 'Outliers Removed (NY, CA, TX, WA) Project Count 2019', '2018-2019 Change in Project Count (%)', '2017-2018 Change in Project Count (%)']
+# x_axis = ['2019 Project Count', '2018 Project Count', '2017 Project Count', 'Outliers Removed (NY, CA, TX, WA) Project Count 2019', '2018-2019 Change in Project Count (%)', '2017-2018 Change in Project Count (%)']
+x_axis = ['2019 GDP per capita', '2018 GDP per capita', '2017 GDP per capita', '2016 GDP per capita', '2015 GDP per capita']
 def get_xax_options(x_axis):
     x_axis_options = []
     for i in x_axis:
         x_axis_options.append({'label': i, 'value': i})
     return x_axis_options
 
-y_axis = ['2019 GDP per capita', '2018 GDP per capita', '2017 GDP per capita', 'Outliers Removed (NY, CA, TX, WA) USA GDP 2019', '2018-2019 Change in GDP (%)', '2017-2018 Change in GDP (%)', 'Number of Universites Per State', 'Number of Universites Per State (No CA)', '2020 Population', '2018 Population', 'Log 2020 Population', 'Log 2018 Population']
+# y_axis = ['Outliers Removed (NY, CA, TX, WA) USA GDP 2019', '2018-2019 Change in GDP (%)', '2017-2018 Change in GDP (%)', 'Number of Universites Per State', 'Number of Universites Per State (No CA)', '2020 Population', '2018 Population', 'Log 2020 Population', 'Log 2018 Population'
+y_axis = ['2020 Population', '2018 Population', '2010 Population', 'Log 2020 Population', 'Log 2018 Population', 'Log 2010 Population']
 def get_yax_options(y_axis):
     y_axis_options = []
     for i in y_axis:
@@ -125,6 +127,7 @@ app.layout = html.Div(
                 ),
             ],
         ),
+
         html.Div(
             id="app-container",
             children=[
@@ -132,11 +135,35 @@ app.layout = html.Div(
                     id="left-column",
                     children=[
                         html.Div(
+                            id="mapdropdown-container",
+                            children=[
+                                dcc.Dropdown(
+                                    id='Mapselect',
+                                    options=[
+                                       {'label': 'State GDP', 'value': 'GDP'},
+                                       {'label': 'County Population', 'value': 'POP'},
+                                       {'label': 'County Unemployment', 'value': 'Unemployment'},
+                                       ],
+                                     value=['Unemployment'],
+                                     multi=False,
+                                     className='MapSelector',
+                                     style={'color': '#1E1E1E'}),
+                                dcc.Checklist(
+                                        id="checkbox",
+                                        options=[
+                                            {'label': 'State GDP', 'value': 'GDP'},
+                                            {'label': 'County Population', 'value': 'POP'},
+                                            {'label': 'County Unemployment', 'value': 'Unemployment'},
+                                        ],
+                                        value=['Unemployment']
+                                        )]),
+
+                        html.Div(
                             id="slider-container",
                             children=[
                                 html.P(
                                     id="slider-text",
-                                    children="Drag the slider to change the year to visualize:",
+                                    children="Drag the slider to adjust year:",
                                 ),
                                 dcc.Slider(
                                     id="years-slider",
@@ -153,20 +180,12 @@ app.layout = html.Div(
                                 ),
                             ],
                         ),
-                        dcc.Checklist(
-                            id="checkbox",
-                            options=[
-                                {'label': 'State GDP', 'value': 'GDP'},
-                                {'label': 'County Population', 'value': 'POP'},
-                                {'label': 'County Unemployment', 'value': 'Unemployment'},
-                            ],
-                            value=['Unemployment']
-                            ),
+
                         html.Div(
                             id="heatmap-container",
                             children=[
                                 html.P(
-                                    "State/County Data Visualization".format(
+                                    "Data Visualization".format(
                                         min(YEARS)
                                     ),
                                     id="heatmap-title",
@@ -354,70 +373,51 @@ def display_map(year, checkbox, figure):
 
 def update_scatter(x1,y1):
 
-    xval = 'Project Count 2019'
-    yval = 'USA GDP 2019'
+    xval = '2019 GDP per capita'
+    yval = '2020 Population'
 
-    if x1 == '2019 Project Count':
-      xval = 'Project Count 2019'
+    if x1 == '2019 GDP per capita':
+      xval = '2019 GDP per capita'
 
-    elif x1  == '2018 Project Count':
-      xval = 'Project Count 2018'
+    elif x1 == '2018 GDP per capita':
+      xval = '2018 GDP per capita'
 
-    elif x1 == '2017 Project Count':
-      xval = 'Project Count 2017'
+    elif x1 == '2017 GDP per capita':
+      xval = '2017 GDP per capita'
 
-    elif x1 == 'Outliers Removed (NY, CA, TX, WA) Project Count 2019':
-      xval = 'Outliers Removed (NY, CA, TX, WA) Project Count 2019'
+    elif x1 == '2016 GDP per capita':
+      xval = '2016 GDP per capita'
 
-    elif x1 == '2018-2019 Change in Project Count (%)':
-          xval = '2018-2019 Change in Project Count (%)'
+    elif x1 == '2015 GDP per capita':
+      xval = '2015 GDP per capita'
 
-    elif x1 == '2017-2018 Change in Project Count (%)':
-         xval = '2017-2018 Change in Project Count (%)'
 
-    if y1 == '2019 GDP per capita':
-      yval = 'USA GDP 2019'
 
-    elif y1 == '2018 GDP per capita':
-      yval = 'USA GDP 2018'
-
-    elif y1 == '2017 GDP per capita':
-      yval = 'USA GDP 2017'
-
-    elif y1 == 'Outliers Removed (NY, CA, TX, WA) USA GDP 2019':
-      yval = 'Outliers Removed (NY, CA, TX, WA) USA GDP 2019'
-
-    elif y1 == '2017-2018 Change in GDP (%)':
-         yval = '2017-2018 Change in GDP (%)'
-
-    elif y1 == '2018-2019 Change in GDP (%)':
-        yval = '2018-2019 Change in GDP (%)'
-
-    elif y1 == 'Number of Universites Per State':
-        yval = 'Number of Universites Per State'
-
-    elif y1 == 'Number of Universites Per State (No CA)':
-        yval = 'Number of Universites Per State (No CA)'
-
-    elif y1 == '2020 Population':
-      yval = 'Pop2020'
+    if y1 == '2020 Population':
+        yval = '2020 Population'
 
     elif y1 == '2018 Population':
-          yval = 'Pop2018'
+        yval = '2018 Population'
+
+    elif y1 == '2010 Population':
+        yval = '2010 Population'
 
     elif y1 == 'Log 2020 Population':
-          yval = 'Log Pop 2020'
+          yval = 'Log 2020 Population'
 
     elif y1 == 'Log 2018 Population':
-          yavl = 'Log Pop 2018'
+          yavl = 'Log 2018 Population'
 
-    # b, m = polyfit(xval, yval, 1)
+    elif y1 == 'Log 2010 Population':
+         yavl = 'Log 2010 Population'
+
+
 
     figure = go.Figure(
-      data=px.scatter(df2,
+      data=px.scatter(df,
            x=xval,
            y=yval,
-           text="Location",
+           text="GeoName",
            title="United States Data Comparison",
            template='plotly_dark',
            trendline = 'ols'))
